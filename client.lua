@@ -37,5 +37,9 @@ local next_request = peers:update(request)
 
 modem.transmit(300, 300, utils.serialize(next_request))
 
-print(textutils.serialise(peers.peers))
+while 1 do
+local input = io.read("l")
 
+  request = peers:encrypt(serverPk, input)
+  modem.transmit(300, 300, utils.serialize(request))
+end

@@ -1,5 +1,6 @@
 local ecdsa = require("ccryptolib.ed25519")
 local utils = require("utils")
+local aead = require("ccryptolib.aead")
 
 --- Signs in place a request with the sender private key
 --- @param sk string The sender secrete key
@@ -12,7 +13,7 @@ end
 
 --- Verifies if a message was signed by the sender
 --- @param r table The request to check
---- @return boolean signed true if the request was signed by the author
+--- @return boolean valid true if the request was signed by the author
 local function verify(r)
   local request = utils.copyTable(r)
   local signature = request["signature"]

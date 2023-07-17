@@ -61,6 +61,7 @@ function Peers:update(r, allowHandshake)
         )
         peer["next_challenge"] = nil
         peer["shared_key"] = dh.exchange(dhsk, r["dh_key"])
+        peer['nonces'] = {}
       end
     end
   elseif r['type'] == "s.terminate_handshake" then
@@ -71,6 +72,7 @@ function Peers:update(r, allowHandshake)
         peer["shared_key"] = dh.exchange(peer["dhsk"], r["dh_key"])
         peer["next_challenge"] = nil
         peer["dhsk"] = nil
+        peer['nonces'] = {}
       end
     end
   end
@@ -114,24 +116,66 @@ function Peers:askHandshake(pk)
   return request
 end
 
+--- Check if a payload coming from the given peer is valid.
+--- @param pk string The remote peer public key
+--- @param payload table The decrypted request payload
+--- @return boolean valid Wether the request is valid or not
+function Peers:verifyPayload(pk, payload)
+  local nonce = payload['nonce']
+  local timestamp = payload['timestamp']
+  local peer = self.peers[pk]
+  return nonce > peer['remote_nonce'] and os.epoch() - timestamp < 1000 -- accept up to 1 second difference
+end
 
---- Update client data from a request
---- @param clients table The clients table to update
---- @param r table The request used to update the data
-local function updateClients(clients, r)
-  if r['type'] == "s.hanshake_request" then
-    local sender = r['from']
-    if clients[sender] == nil then
-      clients[sender] = {
-        next_challenge=r['next_challenge'],
-      }
+--- Encrypts a message
+--- @param to string The 32-bits public key of the other peer
+--- @param content string The content to encrypt
+--- @return table request The request which can be send to the other peer
+function Peers:encrypt(to, content)
+  return network.encrypt(
+    self.pk,
+    to,
+    self.peers[to]['shared_key'],
+    random.random(12),
+    content
+  )
+end
+
+function Peers:cleanNonces(sender)
+  local peer = self.peers[sender]
+  local now = os.epoch("utc")
+  local to_remove = {}
+  for old_nonce, date in pairs(peer['nonces']) do
+    if date < now - 1000 then
+      table.insert(to_remove, old_nonce)
     end
-  elseif r['type'] == "s.begin_handshake" then
-    local sender = r['from']
-    if clients[sender] ~= nil then
-      clients[sender]["next_challenge"] = r["next_challenge"]
-      clients[sender]["dhpk"] = r["dhpk"]
-    end
+  end
+  for _, nonce in ipairs(to_remove) do
+    peer['nonces'][nonce] = nil
+  end
+end
+
+--- Checks and decrypts a request.
+--- When the request is decrypted, the nonce is added in the internal table,
+--- so this function can only be called once with each request.
+--- @param request table The request to decrypt
+--- @return boolean valid Whether the request is valid or not
+--- @return string ?content The content of the request or nil if invalid
+function Peers:decrypt(request)
+  local sender = request['from']
+  local peer = self.peers[sender]
+  local key = peer['shared_key']
+  local nonce = request['nonce']
+  if peer['nonces'][nonce] ~= nil then
+    return false, nil
+  end
+  local valid, content = network.decrypt(key, request)
+  if valid then
+    peer['nonces'][nonce] = os.epoch('utc')
+    self:cleanNonces(sender)
+    return true, content
+  else
+    return false, nil
   end
 end
 

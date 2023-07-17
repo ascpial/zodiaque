@@ -1,6 +1,6 @@
 local utils = require("utils")
 local crypto = require("crypto")
-local random = require("ccryptolib.random")
+local aead = require("ccryptolib.aead")
 
 --- Creates a handshake request.
 --- @param to string The server 32-bits public key
@@ -59,34 +59,91 @@ local function terminateHandshakeRequest(to, pk, sk, challenge, dhpk)
   return request
 end
 
---- Use this to listen to requests of other peers and initiate connection.
---- Encrypted requests will be forwarded to the specified function.
---- Use as a coroutine.
---- @param channel number The channel to listen
---- @param modem table The modem used to transmit information
---- @param peers table The peers object used for authentication
---- @param requests function The function to call when encrypted requests are catch
---- @param[opt=false] allowHandshake boolean Whether to initiate handshake requested by other peers (default to false)
-local function serve(channel, modem, peers, requests, allowHandshake)
-  allowHandshake = allowHandshake or false
-  modem.open(channel)
-  local requestChannel, message
-  while 1 do
-    _, _, requestChannel, _, message, _ = os.pullEvent("modem_message")
-    if requestChannel == channel then
-      local success, request = pcall(utils.unserialize, message)
-      if success and request["to"] == peers.pk and crypto.verify(request) then
-        if request["type"] ~= "s.message" then
-          local response = peers:update(request, allowHandshake)
-          if response ~= nil then
-            modem.transmit(channel, channel, utils.serialize(response))
-          end
-          print(textutils.serialize(peers.peers))
-        else
-          print(request)
-        end
-      end
+--- Encrypt data and return the associated request
+--- @param pk string The 32-bits publickey of the sender
+--- @param to string The 32-bits publickey of the receiver
+--- @param key string The 32-bits encryption key used for communication
+--- @param nonce string The 12-bits nonce to use in this request
+--- @param message string The message to encrypt and wrap into a request
+--- @return table request The request to send to the other peer
+local function encrypt(pk, to, key, nonce, message)
+  local now = os.epoch("utc")
+  local request = {
+    type="s.message",
+    from=pk,
+    to=to,
+    nonce=nonce,
+    timestamp=now,
+  }
+  local cipher, tag = aead.encrypt(key, nonce, message, tostring(now), 8)
+  request['ciphertext'] = cipher
+  request['auth_tag'] = tag
+  return request
+end
+
+--- Decrypts a request
+--- @param key string The 32-bits key that should be used in this communication
+--- @param request table The request to decrypt
+--- @return boolean valid Whether the request could be decrypted or not
+--- @return string ?content The content of the request or nil
+local function decrypt(key, request)
+  local content = aead.decrypt(key, request['nonce'], request['auth_tag'], request['ciphertext'], tostring(request['timestamp']), 8)
+  if content == nil then
+    return false, nil
+  else
+    return true, content
+  end
+end
+
+local function string_with_length(value, length)
+  return type(value) == "string" and #value == length
+end
+
+--- Verify that a the request content contains the excepted values and that signatures are valid
+--- @param request table The request to verify
+--- @return boolean valid Whether the request is valid or not
+local function verify(request)
+  if not string_with_length(request['from'], 32)
+    or not string_with_length(request['to'], 32)
+  then
+    return false
+  end
+
+  if request['type'] == "s.handshake_request" then
+    if type(request['next_challenge']) ~= "string" or #request["next_challenge"] < 16
+       or not string_with_length(request['signature'], 64)
+    then
+      return false
     end
+    return crypto.verify(request)
+  elseif request['type'] == "s.begin_handshake" then
+    if type(request['challenge']) ~= "string"
+      or type(request['next_challenge']) ~= "string" or #request['next_challenge'] < 16
+      or not string_with_length(request['signature'], 64)
+      or not string_with_length(request['dh_key'], 32)
+    then
+      return false
+    end
+    return crypto.verify(request)
+  elseif request['type'] == "s.terminate_handshake" then
+    if request['challenge'] == nil
+      or not string_with_length(request['dh_key'], 32)
+    then
+      return false
+    end
+    return crypto.verify(request)
+  elseif request['type'] == "s.message" then
+    if not string_with_length(request['nonce'], 12)
+      or not string_with_length(request['auth_tag'], 16)
+      or type(request['ciphertext']) ~= "string"
+      or type(request['timestamp']) ~= "number" or request['timestamp'] < os.epoch("utc") - 1000 or request['timestamp'] > os.epoch("utc")
+    then
+      print("no")
+      return false
+    end
+    return true
+  else
+    return false
   end
 end
 
@@ -94,5 +151,7 @@ return {
   makeHandshakeRequest=makeHandshakeRequest,
   beginHandshakeRequest=beginHandshakeRequest,
   terminateHandshakeRequest=terminateHandshakeRequest,
-  serve=serve,
+  verify=verify,
+  encrypt=encrypt,
+  decrypt=decrypt,
 }
