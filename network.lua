@@ -1,4 +1,3 @@
-local utils = require("utils")
 local crypto = require("crypto")
 local aead = require("ccryptolib.aead")
 

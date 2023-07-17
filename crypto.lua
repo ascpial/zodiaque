@@ -1,6 +1,5 @@
 local ecdsa = require("ccryptolib.ed25519")
 local utils = require("utils")
-local aead = require("ccryptolib.aead")
 
 --- Signs in place a request with the sender private key
 --- @param sk string The sender secrete key
