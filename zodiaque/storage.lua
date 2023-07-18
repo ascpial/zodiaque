@@ -1,8 +1,8 @@
 local random = require("ccryptolib.random")
-local network = require('network')
 local dh = require("ccryptolib.x25519")
+local network = require('zodiaque.network')
 
---- The class used to store a single peer and process things with it.
+--- The class used to store a single peer and process things with it
 --- @class PeerStorage
 --- @field localpk string The public key of the local peer
 --- @field pk string The public key of the remote peer
@@ -13,7 +13,7 @@ local dh = require("ccryptolib.x25519")
 --- @field ready boolean Whether the peer is ready or not
 local Peer = {}
 
---- Creates a new peer
+--- Create a new peer
 --- @param pk string The public key of the peer
 --- @return PeerStorage
 function Peer:new(localpk, pk)
@@ -27,7 +27,7 @@ function Peer:new(localpk, pk)
   return o
 end
 
---- Returns local secrete key used for Diffie-Hellman key exchange or generate ones.
+--- Return local secrete key used for Diffie-Hellman key exchange or generate ones
 --- @return string key
 function Peer:getExchangeKey()
   if self.dhsk == nil then
@@ -36,7 +36,7 @@ function Peer:getExchangeKey()
   return self.dhsk
 end
 
---- Computes a shared key from the other peer public key
+--- Compute a shared key from the other peer public key
 --- @param pk string The other peer public key for Diffie-Hellman exchange
 function Peer:computeSharedKey(pk)
   self.shared_key = dh.exchange(self.dhsk, pk)
@@ -45,7 +45,7 @@ function Peer:computeSharedKey(pk)
   os.queueEvent("s.peer_ready", self.pk)
 end
 
---- Checks wether a nonce has already be used or not
+--- Check wether a nonce has already be used or not
 --- @param nonce string The nonce to check
 --- @return boolean
 function Peer:nonceUsed(nonce)
@@ -58,7 +58,7 @@ function Peer:useNonce(nonce)
   self.nonces[nonce] = os.epoch('utc')
 end
 
---- Cleans up the nonce table
+--- Clean up the nonce table
 function Peer:cleanNonces()
   local toRemove = {}
   local minAge = os.epoch('utc') - 1000
@@ -72,14 +72,14 @@ function Peer:cleanNonces()
   end
 end
 
---- Encrypts a message
+--- Encrypt a message
 --- @param message string The message to send
 --- @return table request The request to send
 function Peer:encrypt(message)
   return network.encrypt(self.localpk, self.pk, self.shared_key, random.random(12), message)
 end
 
---- Decrypts a message and store the nonce if applicable
+--- Decrypt a message and store the nonce if applicable
 --- @param request table The request to decrypt
 --- @return boolean valid Wether the request is valid or not
 --- @return string? content If decrypted, the content of the request
@@ -99,7 +99,7 @@ function Peer:decrypt(request)
   end
 end
 
---- Sends a message to the remote peer.
+--- Send a message to the remote peer
 --- This should only be used when the peer has been setup using the API object.
 --- @param message string The message to send
 function Peer:send(message)
@@ -113,7 +113,7 @@ end
 --- @field pk string The public key used by the local peer
 local Peers = {}
 
---- Creates a new peers object to store and manage remote peer connections
+--- Create a new peers object to store and manage remote peer connections
 --- @param sk string The local secrete key
 --- @param pk string The local public key
 --- @return Peers peers
@@ -126,14 +126,14 @@ function Peers:new(pk, sk)
   return o
 end
 
---- Returns the peer linked to the specified public key.
+--- Return the peer linked to the specified public key
 --- @param pk string The public key of the remote peer
 --- @return PeerStorage? peer
 function Peers:getPeer(pk)
   return self[pk]
 end
 
---- Updates a peer from a request and return the next request to send to the peer or nil.
+--- Update a peer from a request and return the next request to send to the peer or nil
 --- @param request table The request sent by the peer to update
 --- @param allowHandshake? boolean Whether to allow handshake request or not
 --- @return table response The next request to send to the other peer or nil if the connection ended
@@ -190,7 +190,7 @@ function Peers:update(request, allowHandshake)
   return response
 end
 
---- Creates a request to begin a handshake with an other peer.
+--- Create a request to begin a handshake with an other peer
 --- Warning: does forget previous connection with the specified peer.
 --- @param pk string The public key of the peer to begin a handshake with
 --- @return table request The request to send to the peer

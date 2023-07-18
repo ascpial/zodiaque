@@ -1,9 +1,9 @@
-local utils = require("utils")
-local network = require("network")
-local storage = require("storage")
+local utils = require("zodiaque.utils")
+local network = require("zodiaque.network")
+local storage = require("zodiaque.storage")
 local ed = require("ccryptolib.ed25519")
 
---- Forwards a message to the queue.
+--- Forward a message to the queue
 --- @param peer PeerStorage
 --- @param content string
 local function forwardEvent(peer, content)
@@ -34,22 +34,22 @@ local function waitForMessage(peer)
   return content
 end
 
---- Class used to manage in a cleaner way modems, peers and server.
+--- Class used to manage in a cleaner way modems, peers and server
 --- @class Api
---- @field allowHandshake boolean
---- @field sk string
---- @field pk string
---- @field channel number
---- @field modem Modem
---- @field peers Peers
---- @field running boolean
+--- @field allowHandshake boolean Wether to accept incoming handshake requests or not, defaults to false
+--- @field sk string The local 32-byte secrete key of the local peer
+--- @field pk string The local 32-byte public key of the local peer derived from the secrete key
+--- @field channel number The channel to listen for communications
+--- @field modem Modem The modem used to communicate
+--- @field peers Peers Stores the other peers
+--- @field running boolean Wether we are watching for new events or not
 local Api = {}
 
---- Creates a new API object
---- @param channel number The port to listen for communications
+--- Create a new API object
+--- @param channel number The channel to listen for communications
 --- @param side string The modem to use
---- @param sk string The local 32-bits secrete key of the local peer (public key is generated from it)
---- @param allowHandshake? boolean Wether to accept incoming handshake requests, defaults to false.
+--- @param sk string The local 32-byte secrete key of the local peer (public key is generated from it)
+--- @param allowHandshake? boolean Wether to accept incoming handshake requests or not, defaults to false
 --- @return Api
 function Api:new(channel, side, sk, allowHandshake)
   local o = {}
@@ -74,12 +74,14 @@ function Api:new(channel, side, sk, allowHandshake)
   return o
 end
 
+--- Send a request using the already open modem
+--- @param request table The request to send
 function Api:sendRequest(request)
   self.modem.transmit(self.channel, self.channel, utils.serialize(request))
 end
 
---- Returns a peer object and connect the peer if needed.
---- @param pk string The 32-bits public key of the remote peer
+--- Return a peer object and connect the peer if needed
+--- @param pk string The 32-byte public key of the remote peer
 function Api:getPeer(pk)
   local storagePeer = self.peers:getPeer(pk)
   if storagePeer == nil then
@@ -90,23 +92,22 @@ function Api:getPeer(pk)
   end
 end
 
---- Send a handshake request to the specified peer and returns the peer.
---- You should wait for the peer to be ready before using it.
---- @param pk string The 32-bist public key of the remote peer
+--- Send a handshake request to the specified peer and returns the peer
+--- @param pk string The 32-byte public key of the remote peer
 --- @return PeerStorage peer The remote peer object
 function Api:connect(pk)
   self:sendRequest(self.peers:askHandshake(pk))
   return self:getPeer(pk)
 end
 
---- Runs a function in parallel of the server, usefull to listen to request while displaying things
---- on screen or managing logic.
---- @param parallelFunc function The function to start in parallel of the server. Should yield often.
+--- Run a function in parallel of the server, usefull to listen to request while displaying things
+--- on screen or managing logic
+--- @param parallelFunc function The function to start in parallel of the server, Should yield often
 function Api:run(parallelFunc)
   parallel.waitForAny(function () self:serve(forwardEvent) end, parallelFunc)
 end
 
---- Launch the server and sends message to the specified function.
+--- Launch the server and sends message to the specified function
 --- @param handler function The function called with the peer and the message
 function Api:serve(handler)
   self.running = true

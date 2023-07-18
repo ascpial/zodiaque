@@ -1,10 +1,10 @@
-local crypto = require("crypto")
+local crypto = require("zodiaque.crypto")
 local aead = require("ccryptolib.aead")
 
---- Creates a handshake request.
---- @param to string The server 32-bits public key
---- @param pk string The local 32-bits public key
---- @param sk string The local 32-bits secrete key
+--- Create a handshake request
+--- @param to string The server 32-byte public key
+--- @param pk string The local 32-byte public key
+--- @param sk string The local 32-byte secrete key
 --- @param next_challenge string The challenge to request to the other peer
 --- @return table request The request to broadcast
 local function makeHandshakeRequest(to, pk, sk, next_challenge)
@@ -18,10 +18,10 @@ local function makeHandshakeRequest(to, pk, sk, next_challenge)
   return request
 end
 
---- Creates a request to begin a handshake.
---- @param to string The client 32-bits public key
---- @param pk string The local 32-bits public key
---- @param sk string The local 32-bits secrete key
+--- Create a request to begin a handshake
+--- @param to string The client 32-byte public key
+--- @param pk string The local 32-byte public key
+--- @param sk string The local 32-byte secrete key
 --- @param challenge string The previous challenge to sign
 --- @param next_challenge string The next challenge to request
 --- @param dhpk string The public key used for Diffie-Hellman exhange
@@ -39,10 +39,10 @@ local function beginHandshakeRequest(to, pk, sk, challenge, next_challenge, dhpk
   return request
 end
 
---- Creates a request to terminate a handshake.
---- @param to string The client 32-bits public key
---- @param pk string The local 32-bits public key
---- @param sk string The local 32-bits secrete key
+--- Create a request to terminate a handshake
+--- @param to string The client 32-byte public key
+--- @param pk string The local 32-byte public key
+--- @param sk string The local 32-byte secrete key
 --- @param challenge string The previous challenge to sign
 --- @param dhpk string The public key used for Diffie-Hellman exhange
 --- @return table request The request to send to the other peer
@@ -59,10 +59,10 @@ local function terminateHandshakeRequest(to, pk, sk, challenge, dhpk)
 end
 
 --- Encrypt data and return the associated request
---- @param pk string The 32-bits publickey of the sender
---- @param to string The 32-bits publickey of the receiver
---- @param key string The 32-bits encryption key used for communication
---- @param nonce string The 12-bits nonce to use in this request
+--- @param pk string The 32-byte publickey of the sender
+--- @param to string The 32-byte publickey of the receiver
+--- @param key string The 32-byte encryption key used for communication
+--- @param nonce string The 12-byte nonce to use in this request
 --- @param message string The message to encrypt and wrap into a request
 --- @return table request The request to send to the other peer
 local function encrypt(pk, to, key, nonce, message)
@@ -80,8 +80,8 @@ local function encrypt(pk, to, key, nonce, message)
   return request
 end
 
---- Decrypts a request
---- @param key string The 32-bits key that should be used in this communication
+--- Decrypt a request
+--- @param key string The 32-byte key that should be used in this communication
 --- @param request table The request to decrypt
 --- @return boolean valid Whether the request could be decrypted or not
 --- @return string ?content The content of the request or nil

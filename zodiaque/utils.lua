@@ -174,7 +174,7 @@ local function orderedNext(t, i)
 end
 
 local serialize_infinity = math.huge
---- Returns a string representing the specified table
+--- Return a string representing the specified table
 --- @param t table The table to convert
 --- @return string payload The converted string
 local function serialize(t)
@@ -233,7 +233,7 @@ local function serialize(t)
     end
 end
 
---- Returns the table contained in a string
+--- Return the table contained in a string
 --- @param payload string The string to convert
 --- @return table t The table container in the string
 local function unserialize(payload)

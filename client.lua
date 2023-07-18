@@ -1,6 +1,9 @@
-local api = require("api")
+-- A demo client which takes a keayboard input and sends it to the other peer, then wait for a response and displays it.
+-- Run generateKeys before trying this out.
+
+local api = require("zodiaque.api")
 local random = require("ccryptolib.random")
-local utils = require("utils")
+local utils = require("zodiaque.utils")
 
 utils.initRandom()
 

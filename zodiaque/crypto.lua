@@ -1,7 +1,7 @@
 local ecdsa = require("ccryptolib.ed25519")
-local utils = require("utils")
+local utils = require("zodiaque.utils")
 
---- Signs in place a request with the sender private key
+--- Sign in place a request with the sender private key.
 --- @param sk string The sender secrete key
 --- @param pk string The sender public key
 --- @param r table The request to sign
@@ -10,7 +10,7 @@ local function sign(sk, pk, r)
   r["signature"] = ecdsa.sign(sk, pk, payloadString)
 end
 
---- Verifies if a message was signed by the sender
+--- Verifie if a message was signed by the sender.
 --- @param r table The request to check
 --- @return boolean valid true if the request was signed by the author
 local function verify(r)

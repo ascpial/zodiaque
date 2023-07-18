@@ -1,3 +1,5 @@
+-- A simple program that show everything that is happening on channel 300.
+
 local modem = peripheral.wrap('top')
 modem.open(300)
 

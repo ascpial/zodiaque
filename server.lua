@@ -1,5 +1,9 @@
-local utils = require("utils")
-local api = require("api")
+-- A demo server which listens for connections, displays them, and respond with pong if the message
+-- was ping else bad request.
+-- Run generateKeys before trying this out.
+
+local utils = require("zodiaque.utils")
+local api = require("zodiaque.api")
 
 utils.initRandom()
 
