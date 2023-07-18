@@ -46,4 +46,4 @@ fs.makeDir("/ccryptolib")
 fs.makeDir("/ccryptolib/internal")
 github_get('migeyel', 'ccryptolib', '/ccryptolib', {}, 'ccryptolib/')
 
-print("The zodiac project and its dependencies have been correctly installed.")
+print("The zodiaque project and its dependencies have been correctly installed.")

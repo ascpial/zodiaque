@@ -2,7 +2,7 @@
 
 The zodiaque project aims to provide a clean, simple, secure and modern way of comunicating in computercraft.
 
-The only thing you need to know before communicating is the server public key, and then everythin will be encrypted and attackers won't be able to read the content of the requests nor impersonate you.
+The only thing you need to know before communicating is the server public key, and then everything will be encrypted and attackers won't be able to read the content of the requests nor impersonate you.
 
 ## Installing
 
@@ -78,7 +78,7 @@ local function run()
 end
 ```
 
-You can then run the program with a parallel loop which listen for message and manages key exchange:
+You can then run the program with a parallel loop which listen for messages and manages key exchange:
 
 ```lua
 client:run(run)
@@ -103,7 +103,7 @@ You can then serve the application:
 client:serve(handler)
 ```
 
-All functions are documented, so a modern IDE should be able to display to you everything you can do with this app.
+All functions are documented, so a modern IDE should be able to display to you everything you can do with this library.
 
 To learn more about how you can access data, I recommend you to check the code of the `api.lua` file and try to understand how things goes.
 
