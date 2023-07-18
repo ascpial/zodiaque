@@ -114,3 +114,9 @@ Magic.
 This will be filled... one day. Or never.
 
 To be quick: your identity is proven by the fact that you can sign challenges containing your public key, and this is how we make sure that Diffie-Hellman key exchange is done with the right person.
+
+## Developing
+
+If you want to work on the project, you can clone the repo in a folder and mount it in a computer using an emulator.
+
+You just need to clone as well the [ccryptolib project](https://github.com/migeyel/ccryptolib) and copy the folder `ccryptolib` in the folder of the zodiaque project (the ccryptolib folder was added to the .gitignore so it won't be an issue).
