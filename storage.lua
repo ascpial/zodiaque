@@ -3,7 +3,8 @@ local network = require('network')
 local dh = require("ccryptolib.x25519")
 
 --- The class used to store a single peer and process things with it.
---- @class Peer
+--- @class PeerStorage
+--- @field localpk string The public key of the local peer
 --- @field pk string The public key of the remote peer
 --- @field next_challenge? string The next challenge used for handshake
 --- @field dhsk? string Your Diffie-Hellman secrete key used for key exchange
@@ -14,13 +15,15 @@ local Peer = {}
 
 --- Creates a new peer
 --- @param pk string The public key of the peer
---- @return Peer
-function Peer:new(pk)
-  local o = {}
+--- @return PeerStorage
+function Peer:new(localpk, pk)
+  local o = {
+    localpk=localpk,
+    pk=pk,
+    ready=false,
+  }
   setmetatable(o, self)
   self.__index = self
-  o.pk = pk
-  o.ready = false
   return o
 end
 
@@ -39,6 +42,7 @@ function Peer:computeSharedKey(pk)
   self.shared_key = dh.exchange(self.dhsk, pk)
   self.dhsk = nil
   self.ready = true
+  os.queueEvent("s.peer_ready", self.pk)
 end
 
 --- Checks wether a nonce has already be used or not
@@ -69,11 +73,10 @@ function Peer:cleanNonces()
 end
 
 --- Encrypts a message
---- @param pk string The public key of the sender
 --- @param message string The message to send
 --- @return table request The request to send
-function Peer:encrypt(pk, message)
-  return network.encrypt(pk, self.pk, self.shared_key, random.random(12), message)
+function Peer:encrypt(message)
+  return network.encrypt(self.localpk, self.pk, self.shared_key, random.random(12), message)
 end
 
 --- Decrypts a message and store the nonce if applicable
@@ -94,6 +97,13 @@ function Peer:decrypt(request)
       return false, nil
     end
   end
+end
+
+--- Sends a message to the remote peer.
+--- This should only be used when the peer has been setup using the API object.
+--- @param message string The message to send
+function Peer:send(message)
+  self.api:sendRequest(self:encrypt(message))
 end
 
 
@@ -118,7 +128,7 @@ end
 
 --- Returns the peer linked to the specified public key.
 --- @param pk string The public key of the remote peer
---- @return Peer? peer
+--- @return PeerStorage? peer
 function Peers:getPeer(pk)
   return self[pk]
 end
@@ -133,7 +143,7 @@ function Peers:update(request, allowHandshake)
   if request['type'] == "s.handshake_request" and allowHandshake then
     local sender = request["from"]
     if self[sender] == nil then
-      local peer = Peer:new(sender)
+      local peer = Peer:new(self.pk, sender)
       self[sender] = peer
       local dhsk = peer:getExchangeKey()
       local dhpk = dh.publicKey(dhsk)
@@ -186,7 +196,7 @@ end
 --- @return table request The request to send to the peer
 function Peers:askHandshake(pk)
   local next_challenge = random.random(64)
-  local peer = Peer:new(pk)
+  local peer = Peer:new(self.pk, pk)
   peer.next_challenge = next_challenge
   self[pk] = peer
   local request = network.makeHandshakeRequest(

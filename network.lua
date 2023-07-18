@@ -137,7 +137,6 @@ local function verify(request)
       or type(request['ciphertext']) ~= "string"
       or type(request['timestamp']) ~= "number" or request['timestamp'] < os.epoch("utc") - 1000 or request['timestamp'] > os.epoch("utc")
     then
-      print("no")
       return false
     end
     return true
