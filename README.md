@@ -115,6 +115,90 @@ This will be filled... one day. Or never.
 
 To be quick: your identity is proven by the fact that you can sign challenges containing your public key, and this is how we make sure that Diffie-Hellman key exchange is done with the right person.
 
+### Identity
+
+Each peer (we'll call a participant in any communication a peer) is identified by a string of characters. This string of characters is a public key that has been generated from a secrete key that the peer that issued it is the only to know.
+
+A peer owns an identity if he can proves that it does know the private key associated with the public key used to identify it.
+
+When doing authentication and exchanging a shared secret for further communications, every request is signed (the entire requst is signed, containing the sender, the receiver, and the content of the request) with the private key of the peer. In this way, other peers can check the validity of the request by verifying the request against the sender public key. If the request is valid, then:
+
+- we can ensure that the peer that claims to be "this public key" does really own this identity;
+- the request has not been tampered with.
+
+### Handshake
+
+To be able to encrypt application communications, we need both peer to know a shared secret, which is a key that can be used in symmetric encryption.
+
+The authentication between Peer A (which initiate the connection) and Peer B (the other peer) goes as follow:
+
+- Peer A, which knows the identity (public key) of Peer B, broadcast a handshake request, **signed with its private key**, that contains:
+
+  - Its own public key (the public key of Peer A) as sender
+  - The public key of Peer B as receiver
+  - A random string of characters that will be used in the next part of the authentication to prevent replay attacks as next_challenge
+
+- When Peer B receives a handshake request which has been verified, and if Peer B accepts incoming handshake request, Peer B generates a Diffie-Hellman keypair, then responds with a begin handshake request, **signed with its private key**, that contains:
+
+  - The public key of Peer B as sender
+  - The public key of Peer A as receiver
+  - The challenge specified in the previous request as challenge
+  - A random string of characters that will be used in the next step to prevent replay attacks as next_challenge
+  - Peer B's Diffie-Hellman public key
+
+- When Peer A receives a begin request which has been verified from someone it knows he asked handshake because it remembers the next_challenge, if the specified challenge is correct, Peer A generates a Diffie-Hellman keypair, then generates the shared secret from its private key and from Peer B's public Diffie-Hellman key, then responds with a terminate handshake request, **signer with its private key**, that contains:
+
+  - The public key of Peer A as sender
+  - The public key of Peer B as receiver
+  - The challenge specified in the previous request as challenge
+  - Peer A's Diffie-Hellman public key
+
+- When Peer B receives a terminate request which has been verified, if it knows a secrete Diffie-Hellman key for Peer A and if the challenge correspond to the one it remembers, Peer B computes the shared secrete from Peer A's Diffie-Hellman public key and store it.
+
+When the handshake is finished, Peer A and Peer B can send messages to each other, while keeping privacy, authenticity and integrity.
+
+### In practice
+
+In this section, we will go through how this algorithm is implemented in practice.
+
+#### Signing requests
+
+The first part, and the most important aspect of this implementation, beside primitives implementations, is how we manage requests signing.
+
+A request is a Lua table serialized. One issue with the default `textutils.serialize` implementation is that the order of the keys inside the serialized body is always the same because it depends on the Lua `next()` function, which, as per Lua docs:
+
+> The order in which the indices are enumerated is not specified, even for numeric indices.
+
+The idea behind request signing is that you serialize in a string the request, you sign it, then add the signature in the original request table and serialize it again.
+
+You cannot use the default `textutils.serialize` function because, depending on background factors, the order will be different, and thus the signature will be considered invalid if you remove the signature from the table and serialize it again.
+
+In the zodiaque package, the function `utils.serialize` will serialize the string with the keys sorted in alphanumerical order, and the order should be predictable.
+
+To summarize:
+
+- to sign a request, you serialize it into a string, and then sign this string;
+- you add the signature into the request table;
+- you serialize the table again, and can then send this string to the other peer.
+
+To verify a request:
+
+- you unserialize the request, and remove the signature from this table;
+- you serialize the table again and check the signature on this string.
+
+#### Request format
+
+The format of a request is the following:
+
+- field `from` (required): this field contains the public key of the sender. Signature should be verified against this key.
+- field `to` (required): this field contains the public key of the receiver. Should be the first field checked when receiving a request.
+- field `type` (required): denote the type of the request. Can be `s.ask_handshake`, `s.begin_handshake`, `s.terminate_handshake` and `s.message`.
+- field `signature` (required for handshake requests): The signature used to prove that the message was send by the sender specified in the `from` field. This is the only field which is not included when serializing a request to sign it.
+
+Other fields are specific to a request type.
+
+#### 
+
 ## Developing
 
 If you want to work on the project, you can clone the repo in a folder and mount it in a computer using an emulator.
