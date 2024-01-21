@@ -202,10 +202,17 @@ The format of a request is the following:
 
 Other fields are specific to a request type.
 
-#### 
-
 ## Developing
 
 If you want to work on the project, you can clone the repo in a folder and mount it in a computer using an emulator.
 
 You just need to clone as well the [ccryptolib project](https://github.com/migeyel/ccryptolib) and copy the folder `ccryptolib` in the folder of the zodiaque project (the ccryptolib folder was added to the .gitignore so it won't be an issue).
+
+## What's next
+
+The current state of the program is functional, but not user-friendly.
+Here are the features I'll look forward to:
+
+- store peers key and shared-secret between sessions with a simple adaptor;
+- add discovery features and pre-sharing secrets;
+- add support for mesh networks, which includes packet forwarding and cross-signing.
